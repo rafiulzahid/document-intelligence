@@ -58,7 +58,8 @@ cp .env.example .env                       # then edit API_KEY
 ollama pull qwen2.5:7b && ollama create qwen2.5-8k -f Code/Modelfile.qwen && ollama pull nomic-embed-text
 docker compose up --build                  # postgres (pgvector), redis, api, worker, web
 ```
-Open http://localhost:3000. The API docs are at http://localhost:8000/docs.
+When the containers are running, open `http://localhost:3000` in a browser on the same machine
+(API docs: `http://localhost:8000/docs`). These addresses point to your own computer, so they only work while the stack is up.
 Ollama must accept connections from containers: start it with `OLLAMA_HOST=0.0.0.0 ollama serve`
 (or skip Ollama with the "No GPU" settings above).
 
