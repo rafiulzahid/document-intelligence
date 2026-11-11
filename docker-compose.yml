@@ -1,0 +1,60 @@
+# Full stack (db, redis, api, worker, web): docker compose up --build   -> http://localhost:3000
+# Only database + Redis: docker compose up -d postgres redis   (then run the API and worker from VS Code)
+services:
+  postgres:
+    image: pgvector/pgvector:pg16          # PostgreSQL 16 with the pgvector extension
+    environment:
+      POSTGRES_USER: docintel
+      POSTGRES_PASSWORD: docintel
+      POSTGRES_DB: docintel
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U docintel"]
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  api:
+    build: .
+    env_file: [.env]
+    environment: &appenv
+      DATABASE_URL: postgresql+psycopg://docintel:docintel@postgres:5432/docintel
+      REDIS_URL: redis://redis:6379/0
+      QUEUE_MODE: rq
+      STORAGE_DIR: /app/data/uploads
+      # Ollama runs on the host (GPU); containers reach it through host.docker.internal
+      DOCINTEL_LLM_BASE_URL: http://host.docker.internal:11434/v1
+      EMBED_BASE_URL: http://host.docker.internal:11434/v1
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    ports: ["8000:8000"]
+    volumes: [uploads:/app/data/uploads]
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_started}
+
+  worker:
+    build: .
+    command: ["rq", "worker", "docintel", "--url", "redis://redis:6379/0"]
+    env_file: [.env]
+    environment: *appenv
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    volumes: [uploads:/app/data/uploads]
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_started}
+
+  web:
+    build: ./web
+    environment:
+      API_URL: http://api:8000          # server-side proxy -> API inside the Docker network
+      API_KEY: ${API_KEY:-}             # taken from .env; never sent to the browser
+    ports: ["3000:3000"]
+    depends_on: [api]
+
+volumes:
+  pgdata:
+  uploads:

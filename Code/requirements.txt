@@ -1,0 +1,25 @@
+# core
+pymupdf>=1.24.3
+pypdf
+pillow
+numpy
+openpyxl
+xlrd
+pandas
+charset-normalizer
+python-dateutil
+pytesseract
+rapidfuzz
+# backend (step 6)
+fastapi
+uvicorn[standard]
+sqlalchemy>=2
+psycopg[binary]
+rq
+redis
+python-multipart
+# tests
+pytest
+httpx
+# optional GPU OCR (pulls in PyTorch with CUDA, ~2-3 GB):
+# easyocr

@@ -1,0 +1,17 @@
+# secrets and environments
+.env
+web/.env.local
+.venv/
+# data (downloaded or generated; see README)
+data/
+northwind_invoices/
+scanned_receipts/
+katana_invoices/
+Samples of electronic invoices*/
+*.zip
+# build/cache
+__pycache__/
+.pytest_cache/
+web/node_modules/
+web/.next/
+*.rdb

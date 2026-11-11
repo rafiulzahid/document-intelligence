@@ -1,0 +1,9 @@
+.venv
+data
+*.zip
+northwind_invoices
+scanned_receipts
+katana_invoices
+Samples of electronic invoices*
+**/__pycache__
+.env

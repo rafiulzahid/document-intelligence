@@ -1,0 +1,6 @@
+# Ollama model with an 8k context window (Ollama's default context is too short for long invoices).
+#   ollama pull qwen2.5:7b
+#   ollama create qwen2.5-8k -f Code/Modelfile.qwen
+FROM qwen2.5:7b
+PARAMETER num_ctx 8192
+PARAMETER temperature 0
