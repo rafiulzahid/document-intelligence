@@ -87,6 +87,8 @@ class LLMClient:
                 last = e
                 if "HTTP 4" in str(e) and "HTTP 429" not in str(e):
                     raise  # bad key / bad model name: retrying will not help
+                if "Cannot reach" in str(e) and attempt >= 1:
+                    raise  # server is down: fall back to the rules baseline without long waits
                 time.sleep(2 ** attempt)
             except ValueError as e:  # model returned something that is not JSON: retry once more
                 last = LLMError(f"Model did not return valid JSON: {e}")

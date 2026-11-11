@@ -20,9 +20,35 @@ There you can review and correct values, search, and cross-check PDFs against an
 
 Architecture: [`docs/architecture.md`](docs/architecture.md) · AI-assistance disclosure: [`docs/ai_disclosure.md`](docs/ai_disclosure.md)
 
+**Demo video:** _link will be added here_ · **Sample files to try:** [`samples/`](samples/)
+
 ---
 
 ## Quick start
+
+### Prerequisites
+
+| Needed for | Install |
+|---|---|
+| Option A (Docker) | Docker with Compose v2 (`docker compose version`). On Linux, add yourself to the `docker` group: `sudo usermod -aG docker $USER && newgrp docker` |
+| Option B/C (local) | Python 3.11+, Node.js 20+, Tesseract (`sudo apt install -y tesseract-ocr`) |
+| LLM extraction + semantic search (optional) | [Ollama](https://ollama.com) and a GPU with about 8 GB VRAM. Without it, see "No GPU" below |
+
+Ports used: 3000 (web), 8000 (API), 5432 (PostgreSQL), 6379 (Redis). If one is taken, change it in
+`docker-compose.yml` and in `.env` (see the table below).
+
+### No GPU / no Ollama
+
+Everything still runs. Put these two lines in `.env` before starting:
+
+```bash
+DOCINTEL_LLM_PROVIDER=none     # rules baseline instead of the LLM (97.6% field accuracy vs 98.4% with the LLM, see Evaluation)
+EMBED_PROVIDER=hash            # simple local embeddings for semantic search
+```
+
+Or use a hosted model instead of Ollama (OpenAI, Claude, Gemini): see the options in `.env.example`.
+If the LLM or embedding server is unreachable, processing falls back to the rules baseline and search falls back to
+keyword search, so nothing crashes.
 
 ### Option A: everything in Docker
 
@@ -33,6 +59,8 @@ ollama pull qwen2.5:7b && ollama create qwen2.5-8k -f Code/Modelfile.qwen && oll
 docker compose up --build                  # postgres (pgvector), redis, api, worker, web
 ```
 Open http://localhost:3000. The API docs are at http://localhost:8000/docs.
+Ollama must accept connections from containers: start it with `OLLAMA_HOST=0.0.0.0 ollama serve`
+(or skip Ollama with the "No GPU" settings above).
 
 ### Option B: development (services in Docker, code in a venv)
 
@@ -54,6 +82,26 @@ cd ../web && cp .env.local.example .env.local && npm install && npm run dev   # 
 
 Set `DATABASE_URL=sqlite:///data/app.db` and `QUEUE_MODE=thread` in `.env`, then run only
 `uvicorn api.main:app` and the web app. Processing then runs in background threads inside the API.
+
+### Try it
+
+1. Open http://localhost:3000 and drop the files from [`samples/`](samples/) on the upload area. Each file shows its
+   progress (queued → processing → done). [`samples/README.md`](samples/README.md) lists what each file should produce.
+2. Click a document to see the page preview, the extracted fields and the validation issues. Correct a value and save.
+3. **Search**: try `Ottilies` or `10260` in keyword, semantic and hybrid mode.
+4. **Cross-verify**: pick `northwind_10260.pdf` and `northwind_ledger.xlsx`.
+
+Or with the API only:
+
+```bash
+KEY=change-me                                    # the API_KEY from .env
+curl -s -H "X-API-Key: $KEY" -F "files=@samples/planted_10265.pdf" http://localhost:8000/api/documents
+curl -s -H "X-API-Key: $KEY" http://localhost:8000/api/documents/1/results      # when status is "done"
+curl -s -H "X-API-Key: $KEY" "http://localhost:8000/api/search?q=10260&mode=hybrid"
+```
+
+If documents stay `queued`, no worker is running: `curl -s -H "X-API-Key: $KEY" http://localhost:8000/api/health`
+shows `"workers": 0`. Start one with `cd Code && rq worker docintel` (Option B) or use `QUEUE_MODE=thread`.
 
 ### Configuration (`.env`)
 
@@ -156,7 +204,7 @@ The report covers:
 ## Tests
 
 ```bash
-pytest Code/tests -v           # 76 tests: ingestion, extraction, validation, API
+pytest Code/tests -v           # 77 tests: ingestion, extraction, validation, API
 ```
 Results: [`docs/test_results.md`](docs/test_results.md), raw JUnit output in `docs/test-results.xml`.
 

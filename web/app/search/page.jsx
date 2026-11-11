@@ -68,6 +68,7 @@ export default function SearchPage() {
       {res && (
         <div className="panel">
           <h2>{res.count} result{res.count === 1 ? "" : "s"} <span className="small muted">· mode: {res.mode}</span></h2>
+          {res.warning && <div className="small muted">{res.warning}</div>}
           <table>
             <thead><tr><th>Invoice</th><th>Supplier / customer</th><th>Date</th><th className="num">Total</th><th>Status</th><th>Match</th></tr></thead>
             <tbody>

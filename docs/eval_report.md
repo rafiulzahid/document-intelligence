@@ -1,6 +1,6 @@
 # Evaluation report
 
-Generated 2026-11-11 14:34 by `Code/build_report.py` from measured runs. Main run: **openai:qwen2.5-8k** (`qwen2.5-8k`); baseline: **rules only, no LLM** (`rules_baseline`).
+Generated 2026-11-11 15:22 by `Code/build_report.py` from measured runs. Main run: **openai:qwen2.5-8k** (`qwen2.5-8k`); baseline: **rules only, no LLM** (`rules_baseline`).
 
 ## 1. Summary
 
@@ -17,7 +17,7 @@ Generated 2026-11-11 14:34 by `Code/build_report.py` from measured runs. Main ru
 | Clean documents wrongly flagged (math/duplicate rules) | 21/218 (9.6%) | 64/218 (29.4%) |
 | PDF↔Excel mismatches detected | 7/7 | 7/7 |
 
-Automated tests: **76 passed, 0 failed, 0 skipped** (8.7 s) — see `docs/test_results.md`.
+Automated tests: **77 passed, 0 failed, 0 skipped** (8.7 s) — see `docs/test_results.md`.
 
 ## 1b. Setup
 

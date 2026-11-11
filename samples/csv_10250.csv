@@ -1,0 +1,4 @@
+invoice_number;invoice_date;customer_name;product;unit_price;quantity;line_total;invoice_total
+10250;2016-07-08;Hanari Carnes;Jack's New England Clam Chowder;7,70;10;77,00;1813,00
+10250;2016-07-08;Hanari Carnes;Manjimup Dried Apples;42,40;35;1484,00;1813,00
+10250;2016-07-08;Hanari Carnes;Louisiana Fiery Hot Pepper Sauce;16,80;15;252,00;1813,00

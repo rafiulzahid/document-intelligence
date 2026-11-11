@@ -78,11 +78,18 @@ def keyword_ranking(s, q: str, limit: int = 200) -> list[tuple[int, float]]:
     return sorted(out.items(), key=lambda x: -x[1])[:limit]
 
 
+class SemanticUnavailable(Exception):
+    pass
+
+
 def semantic_ranking(s, q: str, limit: int = 200) -> list[tuple[int, float]]:
     tag = embeddings.model_tag()
     if not tag:
         return []
-    vec = embeddings.embed([q])[0]
+    try:
+        vec = embeddings.embed([q])[0]
+    except Exception as e:  # noqa: BLE001  (e.g. Ollama not running): keyword search still works
+        raise SemanticUnavailable(f"{type(e).__name__}: {e}") from e
     if db.state["pgvector"] and db.state["vector_dim"] == len(vec):
         rows = s.execute(text("SELECT chunk_id, 1 - (embedding <=> CAST(:v AS vector)) FROM chunk_embeddings "
                               "ORDER BY embedding <=> CAST(:v AS vector) LIMIT :n"), {"v": json.dumps(vec), "n": limit}).all()
@@ -119,16 +126,23 @@ def search(s, q: Optional[str], mode: str = "hybrid", filters: Optional[dict] = 
         invs = s.execute(base.order_by(Invoice.invoice_date.desc().nulls_last(), Invoice.id.desc()).limit(limit)).scalars().all()
         return {"query": q, "mode": "filter", "count": len(invs),
                 "results": [{"score": None, "snippet": None, "match": "filters", **invoice_brief(i)} for i in invs]}
+    warning = None
+    try:
+        sem = [] if mode == "keyword" else semantic_ranking(s, q)
+    except SemanticUnavailable as e:
+        sem, warning = [], f"semantic search unavailable ({e}); showing keyword results"
     if mode == "keyword":
         ranking, used = keyword_ranking(s, q), "keyword"
-    elif mode == "semantic":
-        ranking, used = semantic_ranking(s, q), "semantic"
+    elif mode == "semantic" and not warning:
+        ranking, used = sem, "semantic"
         if not embeddings.model_tag():
             used = "semantic (disabled: EMBED_PROVIDER=none)"
+    elif mode == "semantic":
+        ranking, used = keyword_ranking(s, q), "keyword (semantic unavailable)"
     else:
-        ranking, used = rrf(keyword_ranking(s, q), semantic_ranking(s, q)), "hybrid"
+        ranking, used = rrf(keyword_ranking(s, q), sem), "hybrid" if not warning else "keyword (semantic unavailable)"
     if not ranking:
-        return {"query": q, "mode": used, "count": 0, "results": []}
+        return {"query": q, "mode": used, "count": 0, "results": [], "warning": warning}
     allowed = None
     if filters:
         allowed = {i.id for i in s.execute(base).scalars().all()}
@@ -154,4 +168,4 @@ def search(s, q: Optional[str], mode: str = "hybrid", filters: Optional[dict] = 
         results.append({"score": round(sc, 4), "match": c.kind, "page": c.page_no, "snippet": snippet(c.text, q), **item})
         if len(results) >= limit:
             break
-    return {"query": q, "mode": used, "count": len(results), "results": results}
+    return {"query": q, "mode": used, "count": len(results), "results": results, "warning": warning}

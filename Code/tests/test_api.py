@@ -281,3 +281,12 @@ def test_page_preview(client, tmp_path):
     assert client.get(f"/api/documents/{d['id']}/preview", params={"page": 3}).status_code == 404
     c = upload(client, ledger_csv(tmp_path / "l.csv")).json()["documents"][0]
     assert client.get(f"/api/documents/{c['id']}/preview").status_code == 404
+
+
+def test_search_survives_embedding_service_down(client, tmp_path, monkeypatch):
+    upload(client, make_digital_pdf(tmp_path / "a.pdf"))            # indexed with the hash embedder
+    monkeypatch.setattr(config.settings, "embed_provider", "openai")
+    monkeypatch.setattr(config.settings, "embed_base_url", "http://127.0.0.1:9/v1")   # nothing listens here
+    for mode in ("hybrid", "semantic"):
+        r = client.get("/api/search", params={"q": "Hanari", "mode": mode})
+        assert r.status_code == 200 and r.json()["count"] >= 1 and "unavailable" in r.json()["warning"]
